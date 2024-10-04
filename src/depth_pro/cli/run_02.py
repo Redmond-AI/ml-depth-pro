@@ -9,7 +9,7 @@ import argparse
 import logging
 from pathlib import Path
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import PIL.Image
@@ -82,22 +82,27 @@ def run(args):
             output_file.parent.mkdir(parents=True, exist_ok=True)
             depth_image = PIL.Image.fromarray(depth.astype(np.float32), mode='F')
             depth_image.save(output_file, format="TIFF")
+    
+        # Return the output TIFF file path
+        return output_file
 
-        # Print inference time.
-        inference_time = time.time() - start_time
-        print(f"Inference for {image_path} took {inference_time:.2f} seconds.")
+    output_tiff_files = []
 
     # Use ThreadPoolExecutor to process images concurrently.
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-        list(tqdm(executor.map(process_image, image_paths), total=len(image_paths)))
+        futures = [executor.submit(process_image, image_path) for image_path in image_paths]
+        for future in tqdm(as_completed(futures), total=len(image_paths)):
+            output_file = future.result()
+            if output_file:
+                output_tiff_files.append(output_file)
 
     LOGGER.info("Processing complete. Computing global min and max.")
 
+    # Use the collected list of output TIFF files
     # Step 2: Find global min and max from all TIFF files.
-    depth_files = list(args.output_path.glob("**/*.tiff"))
     global_min = float('inf')
     global_max = float('-inf')
-    for depth_file in depth_files:
+    for depth_file in output_tiff_files:
         depth = np.array(PIL.Image.open(depth_file), dtype=np.float32)
         current_min = depth.min()
         current_max = depth.max()
@@ -107,7 +112,7 @@ def run(args):
     LOGGER.info(f"Global min depth: {global_min}, Global max depth: {global_max}")
 
     # Step 3 and 4: Normalize depth maps, save as PNG, and delete TIFF files.
-    for depth_file in depth_files:
+    for depth_file in output_tiff_files:
         depth = np.array(PIL.Image.open(depth_file), dtype=np.float32)
         normalized_depth = (depth - global_min) / (global_max - global_min)
         gray_depth = (normalized_depth * 255).astype(np.uint8)
