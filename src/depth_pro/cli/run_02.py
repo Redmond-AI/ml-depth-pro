@@ -91,7 +91,7 @@ def run(args):
         print(f"Inference for {image_path} took {inference_time:.2f} seconds.")
 
     # Use ThreadPoolExecutor to process images concurrently.
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         list(tqdm(executor.map(process_image, image_paths), total=len(image_paths)))
 
     LOGGER.info("Done predicting depth!")
