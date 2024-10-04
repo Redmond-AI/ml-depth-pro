@@ -71,20 +71,17 @@ def run(args):
         # Extract the depth.
         depth = prediction["depth"].detach().cpu().numpy().squeeze()
 
-        # Save normalized grayscale PNG image.
+        # Save 32-bit float TIFF file without normalization.
         if args.output_path is not None:
             output_file = (
                 args.output_path
                 / image_path.relative_to(relative_path).parent
-                / (image_path.stem + ".png")
+                / (image_path.stem + ".tiff")
             )
-            LOGGER.info(f"Saving normalized grayscale depth to: {str(output_file)}")
+            LOGGER.info(f"Saving unnormalized depth to: {str(output_file)}")
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            normalized_depth = (depth - depth.min()) / (depth.max() - depth.min())
-            gray_depth = (normalized_depth * 255).astype(np.uint8)
-            PIL.Image.fromarray(gray_depth).save(
-                output_file, format="PNG"
-            )
+            depth_image = PIL.Image.fromarray(depth.astype(np.float32), mode='F')
+            depth_image.save(output_file, format="TIFF")
 
         # Print inference time.
         inference_time = time.time() - start_time
@@ -94,7 +91,34 @@ def run(args):
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         list(tqdm(executor.map(process_image, image_paths), total=len(image_paths)))
 
-    LOGGER.info("Done predicting depth!")
+    LOGGER.info("Processing complete. Computing global min and max.")
+
+    # Step 2: Find global min and max from all TIFF files.
+    depth_files = list(args.output_path.glob("**/*.tiff"))
+    global_min = float('inf')
+    global_max = float('-inf')
+    for depth_file in depth_files:
+        depth = np.array(PIL.Image.open(depth_file), dtype=np.float32)
+        current_min = depth.min()
+        current_max = depth.max()
+        global_min = min(global_min, current_min)
+        global_max = max(global_max, current_max)
+
+    LOGGER.info(f"Global min depth: {global_min}, Global max depth: {global_max}")
+
+    # Step 3 and 4: Normalize depth maps, save as PNG, and delete TIFF files.
+    for depth_file in depth_files:
+        depth = np.array(PIL.Image.open(depth_file), dtype=np.float32)
+        normalized_depth = (depth - global_min) / (global_max - global_min)
+        gray_depth = (normalized_depth * 255).astype(np.uint8)
+        output_file = depth_file.with_suffix('.png')
+        LOGGER.info(f"Saving normalized grayscale depth to: {str(output_file)}")
+        PIL.Image.fromarray(gray_depth, mode='L').save(output_file, format="PNG")
+        LOGGER.info(f"Deleting temporary TIFF file: {str(depth_file)}")
+        depth_file.unlink()
+
+    LOGGER.info("All depth images have been normalized and saved as PNGs. TIFF files have been deleted.")
+
     if not args.skip_display:
         plt.show(block=True)
 
