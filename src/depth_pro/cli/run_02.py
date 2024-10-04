@@ -91,7 +91,7 @@ def run(args):
         print(f"Inference for {image_path} took {inference_time:.2f} seconds.")
 
     # Use ThreadPoolExecutor to process images concurrently.
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         list(tqdm(executor.map(process_image, image_paths), total=len(image_paths)))
 
     LOGGER.info("Done predicting depth!")
@@ -128,6 +128,12 @@ def main():
         "--verbose", 
         action="store_true", 
         help="Show verbose output."
+    )
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=2,
+        help="Maximum number of worker threads for inference (default: 2).",
     )
     
     run(parser.parse_args())
