@@ -114,7 +114,7 @@ def run(args):
     # Step 3 and 4: Normalize depth maps, save as 16-bit PNG, and delete TIFF files.
     for depth_file in output_tiff_files:
         depth = np.array(PIL.Image.open(depth_file), dtype=np.float32)
-        normalized_depth = (depth - global_min) / (1000 - global_min)
+        normalized_depth = (depth - global_min) / (200 - global_min)
         depth_16bit = (normalized_depth * 65535).astype(np.uint16)  # Change to 16-bit
         output_file = depth_file.with_suffix('.png')
         LOGGER.info(f"Saving normalized 16-bit depth to: {str(output_file)}")
