@@ -111,18 +111,18 @@ def run(args):
 
     LOGGER.info(f"Global min depth: {global_min}, Global max depth: {global_max}")
 
-    # Step 3 and 4: Normalize depth maps, save as PNG, and delete TIFF files.
+    # Step 3 and 4: Normalize depth maps, save as 16-bit PNG, and delete TIFF files.
     for depth_file in output_tiff_files:
         depth = np.array(PIL.Image.open(depth_file), dtype=np.float32)
         normalized_depth = (depth - global_min) / (global_max - global_min)
-        gray_depth = (normalized_depth * 255).astype(np.uint8)
+        depth_16bit = (normalized_depth * 65535).astype(np.uint16)  # Change to 16-bit
         output_file = depth_file.with_suffix('.png')
-        LOGGER.info(f"Saving normalized grayscale depth to: {str(output_file)}")
-        PIL.Image.fromarray(gray_depth, mode='L').save(output_file, format="PNG")
+        LOGGER.info(f"Saving normalized 16-bit depth to: {str(output_file)}")
+        PIL.Image.fromarray(depth_16bit, mode='I;16').save(output_file, format="PNG")  # Change mode to 'I;16'
         LOGGER.info(f"Deleting temporary TIFF file: {str(depth_file)}")
         depth_file.unlink()
 
-    LOGGER.info("All depth images have been normalized and saved as PNGs. TIFF files have been deleted.")
+    LOGGER.info("All depth images have been normalized and saved as 16-bit PNGs. TIFF files have been deleted.")
 
     if not args.skip_display:
         plt.show(block=True)
