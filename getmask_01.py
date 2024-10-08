@@ -31,7 +31,8 @@ def process_image(image_path, device, black_ratio, white_ratio, invert):
 
     # Determine bit depth
     max_value = np.iinfo(image_array.dtype).max
-    image_tensor = torch.from_numpy(image_array).to(device, dtype=torch.float32)
+    # Convert image array to float32 before creating tensor
+    image_tensor = torch.from_numpy(image_array.astype(np.float32)).to(device, dtype=torch.float32)
 
     # Normalize image to 0-1 range
     image_tensor /= max_value
