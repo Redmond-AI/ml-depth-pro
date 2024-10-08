@@ -58,8 +58,15 @@ def process_image(image_path, device, black_ratio, white_ratio, invert):
     # Rescale to 16-bit and convert to CPU
     adjusted = (adjusted * 65535).cpu().numpy().astype(np.uint16)
 
-    # Create image from numpy array
-    adjusted_image = Image.fromarray(adjusted)
+    # Create image from numpy array with appropriate mode
+    if image_array.ndim == 2:
+        mode = 'I;16'
+    elif image_array.ndim == 3 and image_array.shape[2] == 3:
+        mode = 'RGB'
+    else:
+        raise ValueError('Unsupported image format')
+    adjusted_image = Image.fromarray(adjusted, mode=mode)
+
     return adjusted_image
 
 def main():
