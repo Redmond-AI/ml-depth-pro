@@ -56,7 +56,7 @@ def process_image(image_path, device, black_ratio, white_ratio, invert):
     adjusted = torch.clamp((image_tensor - black_threshold) / (white_threshold - black_threshold), 0.0, 1.0)
 
     # Rescale to 16-bit and convert to CPU
-    adjusted = (adjusted * 65535).to(torch.uint16).cpu().numpy()
+    adjusted = (adjusted * 65535).cpu().numpy().astype(np.uint16)
 
     # Create image from numpy array
     adjusted_image = Image.fromarray(adjusted)
