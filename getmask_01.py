@@ -5,7 +5,7 @@ from PIL import Image
 import torch
 import numpy as np
 from tqdm import tqdm
-import imageio
+import imageio.v2 as imageio  # Updated import to use imageio v2
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Image Processing Script for Black and White Level Adjustment')
